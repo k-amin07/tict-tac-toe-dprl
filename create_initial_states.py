@@ -1,4 +1,5 @@
 import numpy as np
+import pickle as pkl
 
 def check_game_draw(state):
     if np.count_nonzero(state) == 9:
@@ -67,3 +68,6 @@ def create_initial_states(curr_state):
         
 create_initial_states(curr_state)
 print(len(all_state_info["states"]))
+
+with open("initial_states.pkl", "wb") as f:
+    pkl.dump(all_state_info, f)
