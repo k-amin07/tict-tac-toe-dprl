@@ -53,19 +53,21 @@ def create_initial_states(curr_state):
         if next_state in all_state_info["states"]:
             continue
         
-        all_state_info["states"].append(next_state) 
-
-        if check_game_draw(next_state):
-            all_state_info["values"]["x_val"].append(0)
-            all_state_info["values"]["o_val"].append(0)
-        elif check_winner(next_state, player):
+        
+        if check_winner(next_state, player): 
             all_state_info["values"]["x_val"].append(player*(-1))
             all_state_info["values"]["o_val"].append(player)
+        elif check_game_draw(next_state):
+            all_state_info["values"]["x_val"].append(0)
+            all_state_info["values"]["o_val"].append(0)
         else:
+            create_initial_states(next_state)
             all_state_info["values"]["x_val"].append(0.5)
             all_state_info["values"]["o_val"].append(0.5)
-            create_initial_states(next_state)
-        
+            
+        all_state_info["states"].append(next_state) 
+
+
 create_initial_states(curr_state)
 print(len(all_state_info["states"]))
 
