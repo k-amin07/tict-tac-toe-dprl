@@ -16,12 +16,6 @@ def check_winner(state, player):
             return True
     return False
 
-curr_state = np.array([
-    0, 0, 0,
-    0, 0, 0,
-    0, 0, 0,
-])
-
 curr_state = [
     0, 0, 0,
     0, 0, 0,
@@ -68,8 +62,9 @@ def create_initial_states(curr_state):
         all_state_info["states"].append(next_state) 
 
 
-create_initial_states(curr_state)
-print(len(all_state_info["states"]))
+if __name__ == "__main__":
+    create_initial_states(curr_state)
+    print(len(all_state_info["states"]))
 
-with open("initial_states.pkl", "wb") as f:
-    pkl.dump(all_state_info, f)
+    with open("initial_states.pkl", "wb") as f:
+        pkl.dump(all_state_info, f)
