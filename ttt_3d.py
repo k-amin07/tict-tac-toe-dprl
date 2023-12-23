@@ -1,7 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import tensorflow as tf
+import copy
 import math
 import random
+import os
 
 
 class WinCondition:
@@ -28,7 +31,7 @@ class WinCondition:
     def check_all_vertical_diagonals(self):
 
         xdiag = any(self.check_vertical_xdiagonals(x) for x in range(4))
-        ydiag = any(self.check_vertical_xdiagonals(y) for y in range(4))
+        ydiag = any(self.check_vertical_ydiagonals(y) for y in range(4))
 
         return xdiag or ydiag
 
@@ -103,6 +106,7 @@ class TicTacToe4x4x4(WinCondition):
         self.terminated = False
         self.winner = " "
         self.render_mode = render_mode
+        self.fig = None
 
     def check_draw(self):
         # Check for any empty space in the entire 3D board
@@ -135,34 +139,43 @@ class TicTacToe4x4x4(WinCondition):
                 print()
 
     def create_visualization(self):
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection="3d")
+        if(not self.fig):
+            self.fig = plt.figure()
+            self.ax = self.fig.add_subplot(111, projection="3d")
 
-        for x in range(4):
-            for y in range(4):
-                for z in range(4):
-                    if self.board[x][y][z] == "X":
-                        ax.scatter(x, y, z, color="r", marker="o")
-                    if self.board[x][y][z] == "O":
-                        ax.scatter(x, y, z, color="b", marker="o")
+            for x in range(4):
+                for y in range(4):
+                    for z in range(4):
+                        if self.board[x][y][z] == "X":
+                            self.ax.scatter(x, y, z, color="r", marker="o")
+                        if self.board[x][y][z] == "O":
+                            self.ax.scatter(x, y, z, color="b", marker="o")
 
-        cmin = 0
-        cmax = 3
+            cmin = 0
+            cmax = 3
 
-        ax.set_xticks(np.arange(cmin, cmax + 1, 1))
-        ax.set_yticks(np.arange(cmin, cmax + 1, 1))
-        ax.set_zticks(np.arange(cmin, cmax + 1, 1))
+            self.ax.set_xticks(np.arange(cmin, cmax + 1, 1))
+            self.ax.set_yticks(np.arange(cmin, cmax + 1, 1))
+            self.ax.set_zticks(np.arange(cmin, cmax + 1, 1))
 
-        ax.set_xlabel("X")
-        ax.set_ylabel("Y")
-        ax.set_zlabel("Z")
+            self.ax.set_xlabel("X")
+            self.ax.set_ylabel("Y")
+            self.ax.set_zlabel("Z")
 
-        if self.winner != " ":
-            plt.title(f"Player {self.winner} Won!")
+            if self.winner != " ":
+                plt.title(f"Player {self.winner} Won!")
+            else:
+                plt.title(f"Player {self.current_player} Turn" )
+
+            plt.show()
         else:
-            plt.title(f"Player {self.current_player} Turn" )
-
-        plt.show()
+            for x in range(4):
+                for y in range(4):
+                    for z in range(4):
+                        if self.board[x][y][z] == "X":
+                            self.ax.scatter(x, y, z, color="r", marker="o")
+                        if self.board[x][y][z] == "O":
+                            self.ax.scatter(x, y, z, color="b", marker="o")
 
     def change_player(self):
         if self.current_player == "X":
@@ -213,7 +226,7 @@ class TicTacToe4x4x4(WinCondition):
 
         return self.board, reward, self.terminated, self.current_player
 
-    def step(self, x, y, z):
+    def step_coordinates(self, x, y, z):
         # Output: Observation, reward, terminated, player_turn
         observation, reward, terminated, player_turn = self.update_board(x, y, z)
 
@@ -234,22 +247,119 @@ class TicTacToe4x4x4(WinCondition):
         return observation, reward, terminated, player_turn
 
 
-class TicTacToePlayer(TicTacToe4x4x4):
-    def __init__(self, render_mode="computer"):
-        super().__init__(render_mode)
+def convert_and_flatten_state(state):
+    flattened_state = []
+    for layer in state:
+        for row in layer:
+            for cell in row:
+                if cell == 'X':
+                    flattened_state.append(1)
+                elif cell == 'O':
+                    flattened_state.append(-1)
+                else:
+                    flattened_state.append(0)  # Represent empty cells as 0
+    
+    return np.array(flattened_state)
 
+class TicTacToePlayer:
+    def __init__(self, player):
+        self.state_size = 64
+        self.action_size = 64
+        self.gamma = 0.995
+        self.epsilon = 1.0
+        self.epsilon_decay_rate = 0.995
+        self.epilon_lower_bound = 0.001
+        self.history = []
+        self.player = player
+        self.model = self.build_model()
+    
+    def build_model(self):
+        model = tf.keras.Sequential([
+            tf.keras.layers.Dense(self.state_size, input_dim = self.state_size, activation='relu'),
+            tf.keras.layers.Dense(self.state_size, activation='relu'),
+            tf.keras.layers.Dense(self.state_size, activation='relu'),
+            tf.keras.layers.Dense(self.state_size, activation='relu'),
+            tf.keras.layers.Dense(self.action_size, activation='linear')
+        ])
+        model.compile(loss='mse', optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1-self.gamma))
+        if(os.path.isfile('weights_player_{}.h5'.format(self.player))):
+            model.load_weights('weights_player_{}.h5'.format(self.player))
+        return model
 
-env = TicTacToe4x4x4(render_mode="human")
+    def select_action(self, state, action_space):
+        if(np.random.rand() <= self.epsilon):
+            return np.random.choice(action_space)
+       
+        state_batch = np.expand_dims(convert_and_flatten_state(state), axis=0)
+        q_values = self.model.predict(state_batch)[0]
+        if(self.player == "O"):
+            mask = np.ones_like(q_values) * -np.inf
+            for action in action_space:
+                mask[action] = 0
+            masked_q_values = q_values + mask
+            selected_action = np.argmax(masked_q_values)
+            return selected_action
+        else:
+            mask = np.ones_like(q_values) * np.inf
+            for action in action_space:
+                mask[action] = 0
+            masked_q_values = q_values + mask
+            selected_action = np.argmin(masked_q_values)
+            return selected_action
+        # q_value = np.argmax(self.model.predict(np.expand_dims(convert_and_flatten_state(state), axis=0))[0])
+        # # q_values = self.model.predict(convert_and_flatten_state(state))
+        # # return np.argmax(q_values[0])
+        # return q_value
+    
+    def update_history(self,state,action,reward,next_state, done):
+        self.history.append((state,action,reward,next_state, done))
+
+    def train(self):
+        batch_size = 32
+        ## need some history to train. choose random actions until then
+        ## will probably have to adjust this parameter later
+        if(len (self.history) < batch_size):
+            return
+        # batch = 
+        states, actions, rewards, next_states, dones = zip(*random.sample(self.history, batch_size))
+        # states, actions, rewards, next_states, dones = batch[:, 0], batch[:, 1], batch[:, 2], batch[:, 3], batch[:, 4]
+
+        states = np.array(list(map(convert_and_flatten_state, np.array(states).reshape((-1, 64)))))
+        actions = np.array(actions)
+        rewards = np.array(rewards)
+        next_states = np.array(list(map(convert_and_flatten_state,np.array(next_states).reshape((-1,64)))))
+        dones = np.array(dones)
+        # states = states.reshape((-1, 64))
+        # next_states = next_states.reshape((-1, 64))
+
+        targets = self.model.predict(states)
+        if(self.player == "O"):
+            targets[np.arange(batch_size), actions.astype(int)] = rewards + self.gamma * np.max(self.model.predict(next_states), axis=1) * (1 - dones)
+        else:
+            targets[np.arange(batch_size), actions.astype(int)] = rewards + self.gamma * np.min(self.model.predict(next_states), axis=1) * (1 - dones)
+
+        self.model.fit(states, targets, epochs=50, verbose=0)
+
+        if self.epsilon > self.epilon_lower_bound:
+            self.epsilon *= self.epsilon_decay_rate
+
+    def save_model(self):
+        self.model.save_weights('weights_player_{}.h5'.format(self.player))
+
+player_X = TicTacToePlayer(player='X')
+player_O = TicTacToePlayer(player='O')
 
 def policy_player1(observation, action_space):
-    position = random.choice(action_space)
+    position = player_X.select_action(observation, action_space)
+    # position = random.choice(action_space)
 
     return position
 
 
 # Initialized as a random policy for player 2
 def policy_player2(observation, action_space):
-    position = random.choice(action_space)
+    position = player_O.select_action(observation, action_space)
+    # position = random.choice(action_space)
 
     return position
 
@@ -260,10 +370,12 @@ def play_one_game(policy_player1, policy_player2, render_mode="computer"):
     observation = [[[" " for _ in range(4)] for _ in range(4)] for _ in range(4)]
     reward = 0
     player_turn = "X"
+    i = 0
 
     while not terminated:
-
+        i += 1
         action_space = env.get_action_space()
+        prev_state = copy.deepcopy(observation)
 
         if player_turn == "X":
             action = policy_player1(observation, action_space)
@@ -272,9 +384,27 @@ def play_one_game(policy_player1, policy_player2, render_mode="computer"):
 
         observation, reward, terminated, player_turn = env.step(action)
 
-
-
-    print(reward)
+        ## player has switched at this point but we need to update history for the player that performed the action.
+        ## So the player that gets updated is the one opposite to player turn
+        if player_turn == "O":
+            player_X.update_history(prev_state,action,reward,observation, terminated)
+            player_X.train()
+        else:
+            player_O.update_history(prev_state,action,reward,observation, terminated)
+            player_O.train()
     return reward  # This is the player who won
 
-play_one_game(policy_player1, policy_player2, render_mode="human")
+x,o,draw = 0,0,0
+for i in range(1000):
+    reward = play_one_game(policy_player1, policy_player2, render_mode="computer")
+    if(reward == -1):
+        x += 1
+    elif(reward == 1):
+        o += 1
+    else:
+        draw += 1
+
+print("x: {}\no: {}\nd: {}".format(x/1000,o/1000,draw/1000))
+
+player_X.save_model()
+player_O.save_model()
