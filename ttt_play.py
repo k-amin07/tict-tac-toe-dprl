@@ -1,3 +1,4 @@
+
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
@@ -6,7 +7,6 @@ import math
 import random
 import os
 from tqdm import tqdm
-
 
 class WinCondition:
     def __init__(self):
@@ -247,7 +247,6 @@ class TicTacToe4x4x4(WinCondition):
 
         return observation, reward, terminated, player_turn
 
-
 def convert_and_flatten_state(state):
     flattened_state = []
     for layer in state:
@@ -282,18 +281,18 @@ class TicTacToePlayer:
             tf.keras.layers.Dense(1024, activation='relu', kernel_regularizer='l2'),
             tf.keras.layers.Dense(self.action_size, activation='linear')
         ])
+        if(os.path.isfile('weights_player_{}.h5'.format(self.player))):
+            model.load_weights('weights_player_{}.h5'.format(self.player))
+        else:
+            raise Exception("Model weights not found, run ttt_3d.py to train model first")
         lr_schedule = tf.keras.optimizers.schedules.ExponentialDecay(
             initial_learning_rate=1e-5,
             decay_steps=10000,
             decay_rate=0.99)
         model.compile(loss='mse', optimizer=tf.keras.optimizers.legacy.Adam(learning_rate = lr_schedule, clipvalue=0.5))
-        # if(os.path.isfile('weights_player_{}.h5'.format(self.player))):
-        #     model.load_weights('weights_player_{}.h5'.format(self.player))
         return model
 
     def select_action(self, state, action_space):
-        if(np.random.rand() <= self.epsilon):
-            return np.random.choice(action_space)
        
         state_batch = np.expand_dims(convert_and_flatten_state(state), axis=0)
         q_values = self.model.predict(state_batch)[0]
@@ -311,66 +310,37 @@ class TicTacToePlayer:
             masked_q_values = q_values + mask
             selected_action = np.argmin(masked_q_values)
             return selected_action
-        # q_value = np.argmax(self.model.predict(np.expand_dims(convert_and_flatten_state(state), axis=0))[0])
-        # # q_values = self.model.predict(convert_and_flatten_state(state))
-        # # return np.argmax(q_values[0])
-        # return q_value
     
-    def update_history(self,state,action,reward,next_state, done):
-        self.history.append((state,action,reward,next_state, done))
-
-    def train(self):
-        batch_size = 32
-        ## need some history to train. choose random actions until then
-        ## will probably have to adjust this parameter later
-        if(len (self.history) < batch_size):
-            return
-        # batch = 
-        states, actions, rewards, next_states, dones = zip(*random.sample(self.history, batch_size))
-        # states, actions, rewards, next_states, dones = batch[:, 0], batch[:, 1], batch[:, 2], batch[:, 3], batch[:, 4]
-
-        states = np.array(list(map(convert_and_flatten_state, np.array(states).reshape((-1, 64)))))
-        actions = np.array(actions)
-        rewards = np.array(rewards)
-        next_states = np.array(list(map(convert_and_flatten_state,np.array(next_states).reshape((-1,64)))))
-        dones = np.array(dones)
-        # states = states.reshape((-1, 64))
-        # next_states = next_states.reshape((-1, 64))
-
-        targets = self.model.predict(states)
-        if(self.player == "O"):
-            targets[np.arange(batch_size), actions.astype(int)] = rewards + self.gamma * np.max(self.model.predict(next_states), axis=1) * (1 - dones)
-        else:
-            targets[np.arange(batch_size), actions.astype(int)] = rewards + self.gamma * np.min(self.model.predict(next_states), axis=1) * (1 - dones)
-
-        history = self.model.fit(states, targets, epochs=50, verbose=0)
-        print(max(history.history['loss']))
-        if self.epsilon > self.epilon_lower_bound:
-            self.epsilon *= self.epsilon_decay_rate
-
-    def save_model(self):
-        self.model.save_weights('weights_player_{}.h5'.format(self.player))
-
 player_X = TicTacToePlayer(player='X')
 player_O = TicTacToePlayer(player='O')
 
+
+def get_coordinates(position):
+    x = int((position % 16) % 4)
+    y = int((position % 16) / 4)
+    z = int(position / 16)
+
+    return x, y, z
+
+def get_position(x, y, z):
+    return z * 16 + y * 4 + x
+
 def policy_player1(observation, action_space):
-    position = player_X.select_action(observation, action_space)
-    # position = random.choice(action_space)
+    action = player_X.select_action(observation, action_space)
+    print("AI action: ")
+    print(action, get_coordinates(action))
+    print("\n")
+    return action
 
-    return position
-
-
-# Initialized as a random policy for player 2
 def policy_player2(observation, action_space):
-    position = player_O.select_action(observation, action_space)
-    # position = random.choice(action_space)
-
-    return position
-
+    for action in action_space:
+        print(action,get_coordinates(action))
+    print("Input action")
+    action = int(input())
+    print("\n\n\n{}\n\n".format(action))
+    return action
 def play_one_game(policy_player1, policy_player2, render_mode="computer"):
     env = TicTacToe4x4x4(render_mode)
-
     terminated = 0
     observation = [[[" " for _ in range(4)] for _ in range(4)] for _ in range(4)]
     reward = 0
@@ -380,27 +350,19 @@ def play_one_game(policy_player1, policy_player2, render_mode="computer"):
     while not terminated:
         i += 1
         action_space = env.get_action_space()
-        prev_state = copy.deepcopy(observation)
 
         if player_turn == "X":
             action = policy_player1(observation, action_space)
         else:
             action = policy_player2(observation, action_space)
-
+        
         observation, reward, terminated, player_turn = env.step(action)
-
-        ## player has switched at this point but we need to update history for the player that performed the action.
-        ## So the player that gets updated is the one opposite to player turn
-        if player_turn == "O":
-            player_X.update_history(prev_state,action,reward,observation, terminated)
-            player_X.train()
-        else:
-            player_O.update_history(prev_state,action,reward,observation, terminated)
-            player_O.train()
-    return reward  # This is the player who won
+        print(observation, reward, terminated, player_turn)
+    return reward
 
 x,o,draw = 0,0,0
-num_steps = 10000
+
+num_steps = 10
 for i in tqdm(range(num_steps)):
     reward = play_one_game(policy_player1, policy_player2, render_mode="computer")
     if(reward == -1):
@@ -409,11 +371,5 @@ for i in tqdm(range(num_steps)):
         o += 1
     else:
         draw += 1
-    print("********************")
-    print("ITERATION:{}".format(i+1))
-    print("********************")
 
 print("x: {}\no: {}\nd: {}".format(x/num_steps,o/num_steps,draw/num_steps))
-
-player_X.save_model()
-player_O.save_model()
