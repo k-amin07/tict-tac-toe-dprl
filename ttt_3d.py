@@ -5,6 +5,7 @@ import copy
 import math
 import random
 import os
+from tqdm import tqdm
 
 
 class WinCondition:
@@ -395,7 +396,8 @@ def play_one_game(policy_player1, policy_player2, render_mode="computer"):
     return reward  # This is the player who won
 
 x,o,draw = 0,0,0
-for i in range(1000):
+num_steps = 10000
+for i in tqdm(range(num_steps)):
     reward = play_one_game(policy_player1, policy_player2, render_mode="computer")
     if(reward == -1):
         x += 1
@@ -404,7 +406,7 @@ for i in range(1000):
     else:
         draw += 1
 
-print("x: {}\no: {}\nd: {}".format(x/1000,o/1000,draw/1000))
+print("x: {}\no: {}\nd: {}".format(x/num_steps,o/num_steps,draw/num_steps))
 
 player_X.save_model()
 player_O.save_model()
