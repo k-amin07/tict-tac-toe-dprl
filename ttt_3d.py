@@ -286,9 +286,9 @@ class TicTacToePlayer:
             initial_learning_rate=1e-5,
             decay_steps=10000,
             decay_rate=0.99)
+        if(os.path.isfile('weights_player_{}.h5'.format(self.player))):
+            model.load_weights('weights_player_{}.h5'.format(self.player))
         model.compile(loss='mse', optimizer=tf.keras.optimizers.legacy.Adam(learning_rate = lr_schedule, clipvalue=0.5))
-        # if(os.path.isfile('weights_player_{}.h5'.format(self.player))):
-        #     model.load_weights('weights_player_{}.h5'.format(self.player))
         return model
 
     def select_action(self, state, action_space):
@@ -305,16 +305,12 @@ class TicTacToePlayer:
             selected_action = np.argmax(masked_q_values)
             return selected_action
         else:
-            mask = np.ones_like(q_values) * np.inf
+            mask = np.ones_like(q_values) * -np.inf
             for action in action_space:
                 mask[action] = 0
             masked_q_values = q_values + mask
-            selected_action = np.argmin(masked_q_values)
+            selected_action = np.argmax(masked_q_values)
             return selected_action
-        # q_value = np.argmax(self.model.predict(np.expand_dims(convert_and_flatten_state(state), axis=0))[0])
-        # # q_values = self.model.predict(convert_and_flatten_state(state))
-        # # return np.argmax(q_values[0])
-        # return q_value
     
     def update_history(self,state,action,reward,next_state, done):
         self.history.append((state,action,reward,next_state, done))
@@ -350,6 +346,7 @@ class TicTacToePlayer:
 
     def save_model(self):
         self.model.save_weights('weights_player_{}.h5'.format(self.player))
+        self.model.save('model_player_{}.keras'.format(self.player))
 
 player_X = TicTacToePlayer(player='X')
 player_O = TicTacToePlayer(player='O')
@@ -400,8 +397,8 @@ def play_one_game(policy_player1, policy_player2, render_mode="computer"):
     return reward  # This is the player who won
 
 x,o,draw = 0,0,0
-num_steps = 10000
-for i in tqdm(range(num_steps)):
+num_steps = 1000
+for i in range(num_steps):
     reward = play_one_game(policy_player1, policy_player2, render_mode="computer")
     if(reward == -1):
         x += 1
@@ -411,9 +408,9 @@ for i in tqdm(range(num_steps)):
         draw += 1
     print("********************")
     print("ITERATION:{}".format(i+1))
-    print("********************")
+    print("********************\n")
+    if(i and i%100 == 0):
+        player_X.save_model()
+        player_O.save_model()
+        print("x: {}\no: {}\nd: {}".format(x/i,o/i,draw/i))
 
-print("x: {}\no: {}\nd: {}".format(x/num_steps,o/num_steps,draw/num_steps))
-
-player_X.save_model()
-player_O.save_model()

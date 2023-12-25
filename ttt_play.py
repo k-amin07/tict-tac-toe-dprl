@@ -244,7 +244,8 @@ class TicTacToe4x4x4(WinCondition):
 
         if self.render_mode == "human":
             self.create_visualization()
-
+        else:
+            self.print_board()
         return observation, reward, terminated, player_turn
 
 def convert_and_flatten_state(state):
@@ -274,6 +275,10 @@ class TicTacToePlayer:
         self.model = self.build_model()
     
     def build_model(self):
+        if(os.path.isfile('model_player_{}.keras'.format(self.player))):
+            model = tf.keras.models.load('model_player_{}.keras'.format(self.player))
+            return model
+        
         model = tf.keras.Sequential([
             tf.keras.layers.Dense(1024, input_dim = self.state_size),
             tf.keras.layers.Dense(1024, activation='relu', kernel_regularizer='l2'),
@@ -295,20 +300,22 @@ class TicTacToePlayer:
     def select_action(self, state, action_space):
        
         state_batch = np.expand_dims(convert_and_flatten_state(state), axis=0)
+        state_batch = np.expand_dims(convert_and_flatten_state(state), axis=0)
         q_values = self.model.predict(state_batch)[0]
         if(self.player == "O"):
             mask = np.ones_like(q_values) * -np.inf
             for action in action_space:
                 mask[action] = 0
             masked_q_values = q_values + mask
+            # masked_q_values = np.abs(masked_q_values)
             selected_action = np.argmax(masked_q_values)
             return selected_action
         else:
-            mask = np.ones_like(q_values) * np.inf
+            mask = np.ones_like(q_values) * -np.inf
             for action in action_space:
                 mask[action] = 0
             masked_q_values = q_values + mask
-            selected_action = np.argmin(masked_q_values)
+            selected_action = np.argmax(masked_q_values)
             return selected_action
     
 player_X = TicTacToePlayer(player='X')
@@ -327,42 +334,50 @@ def get_position(x, y, z):
 
 def policy_player1(observation, action_space):
     action = player_X.select_action(observation, action_space)
-    print("AI action: ")
+    print("X action: ")
     print(action, get_coordinates(action))
     print("\n")
     return action
 
 def policy_player2(observation, action_space):
-    for action in action_space:
-        print(action,get_coordinates(action))
-    print("Input action")
-    action = int(input())
-    print("\n\n\n{}\n\n".format(action))
+    # for action in action_space:
+    #     print(action,get_coordinates(action))
+    # print("Input action")
+    # action = int(input())
+    # print("\n\n\n{}\n\n".format(action))
+    # return action
+    action = player_O.select_action(observation, action_space)
+    print("O action: ")
+    print(action, get_coordinates(action))
+    print("\n")
     return action
+
 def play_one_game(policy_player1, policy_player2, render_mode="computer"):
     env = TicTacToe4x4x4(render_mode)
     terminated = 0
     observation = [[[" " for _ in range(4)] for _ in range(4)] for _ in range(4)]
     reward = 0
-    player_turn = "X"
+    player_turn = "O"
     i = 0
 
     while not terminated:
         i += 1
         action_space = env.get_action_space()
 
-        if player_turn == "X":
+        if player_turn == "O":
             action = policy_player1(observation, action_space)
         else:
             action = policy_player2(observation, action_space)
         
         observation, reward, terminated, player_turn = env.step(action)
-        print(observation, reward, terminated, player_turn)
+        # for obs in observation:
+        #     print(obs)
+        # print({reward, terminated, player_turn})
     return reward
 
 x,o,draw = 0,0,0
 
-num_steps = 10
+num_steps = 100
 for i in tqdm(range(num_steps)):
     reward = play_one_game(policy_player1, policy_player2, render_mode="computer")
     if(reward == -1):
