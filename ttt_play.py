@@ -128,14 +128,20 @@ class TicTacToe4x4x4(WinCondition):
 
     def print_board(self):
         # Prints each layer of the 3D board
+        num = 0
         for layer in range(4):
             print(f"Layer {layer + 1}:")
-            print("┌───┬───┬───┬───┐")
+            print("┌───────────────┬───────────────┬───────────────┬───────────────┐")
             for i, row in enumerate(self.board[layer]):
-                print("│ " + " │ ".join(row) + " │")
+                # temp_row = []
+                # for _ in row:
+                #     coordinates = get_coordinates(num)
+                #     temp_row.append(str(coordinates) + ":" + str(num) + str(_))
+                #     num += 1
+                print("│ " + " │ ".join(row) + "  │")
                 if i < 3:
-                    print("├───┼───┼───┼───┤")
-            print("└───┴───┴───┴───┘")
+                    print("├───────────────┼───────────────┼───────────────┼───────────────┤")
+            print("└───────────────┴───────────────┴───────────────┴───────────────┘")
             if layer < 3:
                 print()
 
@@ -254,9 +260,9 @@ def convert_and_flatten_state(state):
         for row in layer:
             for cell in row:
                 if cell == 'X':
-                    flattened_state.append(1)
-                elif cell == 'O':
                     flattened_state.append(-1)
+                elif cell == 'O':
+                    flattened_state.append(1)
                 else:
                     flattened_state.append(0)  # Represent empty cells as 0
     
@@ -276,7 +282,7 @@ class TicTacToePlayer:
     
     def build_model(self):
         if(os.path.isfile('model_player_{}.keras'.format(self.player))):
-            model = tf.keras.models.load('model_player_{}.keras'.format(self.player))
+            model = tf.keras.models.load_model('model_player_{}.keras'.format(self.player))
             return model
         
         model = tf.keras.Sequential([
@@ -299,7 +305,6 @@ class TicTacToePlayer:
 
     def select_action(self, state, action_space):
        
-        state_batch = np.expand_dims(convert_and_flatten_state(state), axis=0)
         state_batch = np.expand_dims(convert_and_flatten_state(state), axis=0)
         q_values = self.model.predict(state_batch)[0]
         if(self.player == "O"):
@@ -326,7 +331,6 @@ def get_coordinates(position):
     x = int((position % 16) % 4)
     y = int((position % 16) / 4)
     z = int(position / 16)
-
     return x, y, z
 
 def get_position(x, y, z):
@@ -342,10 +346,10 @@ def policy_player1(observation, action_space):
 def policy_player2(observation, action_space):
     # for action in action_space:
     #     print(action,get_coordinates(action))
-    # print("Input action")
-    # action = int(input())
-    # print("\n\n\n{}\n\n".format(action))
-    # return action
+    print("Input action")
+    action = int(input())
+    print("\n\n\n{} {}\n\n".format(action,get_coordinates(action)))
+    return action
     action = player_O.select_action(observation, action_space)
     print("O action: ")
     print(action, get_coordinates(action))
@@ -357,14 +361,14 @@ def play_one_game(policy_player1, policy_player2, render_mode="computer"):
     terminated = 0
     observation = [[[" " for _ in range(4)] for _ in range(4)] for _ in range(4)]
     reward = 0
-    player_turn = "O"
+    player_turn = "X"
     i = 0
 
     while not terminated:
         i += 1
         action_space = env.get_action_space()
 
-        if player_turn == "O":
+        if player_turn == "X":
             action = policy_player1(observation, action_space)
         else:
             action = policy_player2(observation, action_space)

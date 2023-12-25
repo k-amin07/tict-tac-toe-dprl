@@ -254,9 +254,9 @@ def convert_and_flatten_state(state):
         for row in layer:
             for cell in row:
                 if cell == 'X':
-                    flattened_state.append(1)
-                elif cell == 'O':
                     flattened_state.append(-1)
+                elif cell == 'O':
+                    flattened_state.append(1)
                 else:
                     flattened_state.append(0)  # Represent empty cells as 0
     
