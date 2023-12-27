@@ -7,7 +7,7 @@ import math
 import random
 import os
 from tqdm import tqdm
-
+from copy import deepcopy
 class WinCondition:
     def __init__(self):
         self.win_player = "X"
@@ -314,6 +314,32 @@ class TicTacToePlayer:
             masked_q_values = q_values + mask
             # masked_q_values = np.abs(masked_q_values)
             selected_action = np.argmax(masked_q_values)
+            
+            # Check Self win
+            win_checker = WinCondition()
+            win_checker.win_player = self.player
+            for a in action_space:
+                tmp_board = deepcopy(state)
+                #tmp_board[x][y][z] = self.player
+                x,y,z = get_coordinates(a)
+                tmp_board[x][y][z] = self.player
+                win_checker.board = tmp_board
+                if win_checker.check_win():
+                    selected_action = a
+                    return selected_action
+
+            # Check other win
+            win_checker = WinCondition()
+            win_checker.win_player = 'X' if self.player=='O' else "O"
+            for a in action_space:
+                tmp_board = deepcopy(state)
+                x,y,z = get_coordinates(a)
+                tmp_board[x][y][z] = 'X' if self.player=='O' else "O"
+                win_checker.board = tmp_board
+                if win_checker.check_win():
+                    selected_action = a
+                    return selected_action
+               
             return selected_action
         else:
             mask = np.ones_like(q_values) * -np.inf
@@ -321,6 +347,33 @@ class TicTacToePlayer:
                 mask[action] = 0
             masked_q_values = q_values + mask
             selected_action = np.argmax(masked_q_values)
+
+            # Check Self win
+            win_checker = WinCondition()
+            win_checker.win_player = self.player
+            for a in action_space:
+                tmp_board = deepcopy(state)
+                #tmp_board[x][y][z] = self.player
+                x,y,z = get_coordinates(a)
+                tmp_board[x][y][z] = self.player
+                win_checker.board = tmp_board
+                if win_checker.check_win():
+                    selected_action = a
+                    return selected_action
+
+            # Check other win
+            win_checker = WinCondition()
+            win_checker.win_player = 'X' if self.player=='O' else "O"
+            for a in action_space:
+                tmp_board = deepcopy(state)
+                x,y,z = get_coordinates(a)
+                
+                tmp_board[x][y][z] = 'X' if self.player=='O' else "O"
+                win_checker.board = tmp_board
+                if win_checker.check_win():
+                    selected_action = a
+                    return selected_action
+                
             return selected_action
     
 player_X = TicTacToePlayer(player='X')
@@ -337,6 +390,10 @@ def get_position(x, y, z):
     return z * 16 + y * 4 + x
 
 def policy_player1(observation, action_space):
+    # print("Input action")
+    # action = int(input())
+    # print("\n\n\n{} {}\n\n".format(action,get_coordinates(action)))
+    # return action
     action = player_X.select_action(observation, action_space)
     print("X action: ")
     print(action, get_coordinates(action))
@@ -350,11 +407,11 @@ def policy_player2(observation, action_space):
     action = int(input())
     print("\n\n\n{} {}\n\n".format(action,get_coordinates(action)))
     return action
-    action = player_O.select_action(observation, action_space)
-    print("O action: ")
-    print(action, get_coordinates(action))
-    print("\n")
-    return action
+    # action = player_O.select_action(observation, action_space)
+    # print("O action: ")
+    # print(action, get_coordinates(action))
+    # print("\n")
+    # return action
 
 def play_one_game(policy_player1, policy_player2, render_mode="computer"):
     env = TicTacToe4x4x4(render_mode)
@@ -380,15 +437,16 @@ def play_one_game(policy_player1, policy_player2, render_mode="computer"):
     return reward
 
 x,o,draw = 0,0,0
+reward = play_one_game(policy_player1, policy_player2, render_mode="computer")
+print(reward)
+# num_steps = 10
+# for i in tqdm(range(num_steps)):
+#     reward = play_one_game(policy_player1, policy_player2, render_mode="computer")
+#     if(reward == -1):
+#         x += 1
+#     elif(reward == 1):
+#         o += 1
+#     else:
+#         draw += 1
 
-num_steps = 100
-for i in tqdm(range(num_steps)):
-    reward = play_one_game(policy_player1, policy_player2, render_mode="computer")
-    if(reward == -1):
-        x += 1
-    elif(reward == 1):
-        o += 1
-    else:
-        draw += 1
-
-print("x: {}\no: {}\nd: {}".format(x/num_steps,o/num_steps,draw/num_steps))
+# print("x: {}\no: {}\nd: {}".format(x/num_steps,o/num_steps,draw/num_steps))
