@@ -403,15 +403,15 @@ def policy_player1(observation, action_space):
 def policy_player2(observation, action_space):
     # for action in action_space:
     #     print(action,get_coordinates(action))
-    print("Input action")
-    action = int(input())
-    print("\n\n\n{} {}\n\n".format(action,get_coordinates(action)))
-    return action
-    # action = player_O.select_action(observation, action_space)
-    # print("O action: ")
-    # print(action, get_coordinates(action))
-    # print("\n")
+    # print("Input action")
+    # action = int(input())
+    # print("\n\n\n{} {}\n\n".format(action,get_coordinates(action)))
     # return action
+    action = player_O.select_action(observation, action_space)
+    print("O action: ")
+    print(action, get_coordinates(action))
+    print("\n")
+    return action
 
 def play_one_game(policy_player1, policy_player2, render_mode="computer"):
     env = TicTacToe4x4x4(render_mode)
@@ -439,7 +439,7 @@ def play_one_game(policy_player1, policy_player2, render_mode="computer"):
 x,o,draw = 0,0,0
 reward = play_one_game(policy_player1, policy_player2, render_mode="computer")
 print(reward)
-# num_steps = 10
+# num_steps = 100
 # for i in tqdm(range(num_steps)):
 #     reward = play_one_game(policy_player1, policy_player2, render_mode="computer")
 #     if(reward == -1):

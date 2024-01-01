@@ -292,9 +292,6 @@ class TicTacToePlayer:
         return model
 
     def select_action(self, state, action_space):
-        if(np.random.rand() <= self.epsilon):
-            return np.random.choice(action_space)
-       
         state_batch = np.expand_dims(convert_and_flatten_state(state), axis=0)
         q_values = self.model.predict(state_batch)[0]
         if(self.player == "O"):
@@ -302,15 +299,91 @@ class TicTacToePlayer:
             for action in action_space:
                 mask[action] = 0
             masked_q_values = q_values + mask
+            # masked_q_values = np.abs(masked_q_values)
             selected_action = np.argmax(masked_q_values)
-            return selected_action
+            
+            # Check Self win
+            win_checker = WinCondition()
+            win_checker.win_player = self.player
+            for a in action_space:
+                tmp_board = copy.deepcopy(state)
+                #tmp_board[x][y][z] = self.player
+                x,y,z = get_coordinates(a)
+                tmp_board[x][y][z] = self.player
+                win_checker.board = tmp_board
+                if win_checker.check_win():
+                    selected_action = a
+                    return selected_action
+
+            # Check other win
+            win_checker = WinCondition()
+            win_checker.win_player = 'X' if self.player=='O' else "O"
+            for a in action_space:
+                tmp_board = copy.deepcopy(state)
+                x,y,z = get_coordinates(a)
+                tmp_board[x][y][z] = 'X' if self.player=='O' else "O"
+                win_checker.board = tmp_board
+                if win_checker.check_win():
+                    selected_action = a
+                    return selected_action
+            
+            if(np.random.rand() <= self.epsilon):
+                return np.random.choice(action_space)
+            else:
+                return selected_action
+            
         else:
             mask = np.ones_like(q_values) * -np.inf
             for action in action_space:
                 mask[action] = 0
             masked_q_values = q_values + mask
             selected_action = np.argmax(masked_q_values)
-            return selected_action
+
+            # Check Self win
+            win_checker = WinCondition()
+            win_checker.win_player = self.player
+            for a in action_space:
+                tmp_board = copy.deepcopy(state)
+                #tmp_board[x][y][z] = self.player
+                x,y,z = get_coordinates(a)
+                tmp_board[x][y][z] = self.player
+                win_checker.board = tmp_board
+                if win_checker.check_win():
+                    selected_action = a
+                    return selected_action
+
+            # Check other win
+            win_checker = WinCondition()
+            win_checker.win_player = 'X' if self.player=='O' else "O"
+            for a in action_space:
+                tmp_board = copy.deepcopy(state)
+                x,y,z = get_coordinates(a)
+                
+                tmp_board[x][y][z] = 'X' if self.player=='O' else "O"
+                win_checker.board = tmp_board
+                if win_checker.check_win():
+                    selected_action = a
+                    return selected_action
+                
+            if(np.random.rand() <= self.epsilon):
+                return np.random.choice(action_space)
+            else:
+                return selected_action
+    
+        # if(self.player == "O"):
+        #     mask = np.ones_like(q_values) * -np.inf
+        #     for action in action_space:
+        #         mask[action] = 0
+        #     masked_q_values = q_values + mask
+        #     selected_action = np.argmax(masked_q_values)
+        #     return selected_action
+        # else:
+        #     mask = np.ones_like(q_values) * -np.inf
+        #     for action in action_space:
+        #         mask[action] = 0
+        #     masked_q_values = q_values + mask
+        #     selected_action = np.argmax(masked_q_values)
+        #     return selected_action
     
     def update_history(self,state,action,reward,next_state, done):
         self.history.append((state,action,reward,next_state, done))
@@ -347,6 +420,15 @@ class TicTacToePlayer:
     def save_model(self):
         self.model.save_weights('weights_player_{}.h5'.format(self.player))
         self.model.save('model_player_{}.keras'.format(self.player))
+
+def get_coordinates(position):
+    x = int((position % 16) % 4)
+    y = int((position % 16) / 4)
+    z = int(position / 16)
+    return x, y, z
+
+def get_position(x, y, z):
+    return z * 16 + y * 4 + x
 
 player_X = TicTacToePlayer(player='X')
 player_O = TicTacToePlayer(player='O')
