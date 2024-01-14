@@ -5,7 +5,7 @@ In ttt_3d, two agents play each other as X and O, initially exploring and then u
 
 In ttt_play, any one of the player policies can be replaced with human (manual) input to play against AI. This file was used in the final competition, where the input for human player was obtained from the AI of other participants.
 
-The winner of the competition used a DP approach, selecting the best possible action given the current board state. ttt_train_against_dp uses the better of the two models (player O) from ttt_3d to train against the competition winner. After a 100 games, the stats are as follows
+The winner of the competition used a DP approach, selecting the best possible action given the current board state. ttt_train_against_dp uses the better of the two models (player O) from ttt_3d to train against the competition winner. After a 101 games, the stats are as follows
 
 
 | X  | O  | Draw |
