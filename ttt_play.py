@@ -438,7 +438,8 @@ def play_one_game(policy_player1, policy_player2, render_mode="computer"):
 
 x,o,draw = 0,0,0
 reward = play_one_game(policy_player1, policy_player2, render_mode="computer")
-print(reward)
+winning_player = 'O' if reward == 1 else 'X'
+print("Player {} Won!".format(winning_player))
 # num_steps = 100
 # for i in tqdm(range(num_steps)):
 #     reward = play_one_game(policy_player1, policy_player2, render_mode="computer")
