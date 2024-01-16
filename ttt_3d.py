@@ -491,7 +491,7 @@ for i in range(num_steps):
     print("********************")
     print("ITERATION:{}".format(i+1))
     print("********************\n")
-    if(i+1%100 == 0):
+    if((i+1)%100 == 0):
         player_X.save_model()
         player_O.save_model()
         print("x: {}\no: {}\nd: {}".format(x/i,o/i,draw/i))

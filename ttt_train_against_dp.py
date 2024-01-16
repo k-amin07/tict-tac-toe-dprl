@@ -727,25 +727,40 @@ class TicTacToePlayer:
         if(len (self.history) < batch_size):
             return
         # batch = 
-        states, actions, rewards, next_states, dones = zip(*random.sample(self.history, batch_size))
-        # states, actions, rewards, next_states, dones = batch[:, 0], batch[:, 1], batch[:, 2], batch[:, 3], batch[:, 4]
+        for i in range(0,batch_size,len (self.history)):
+            states, actions, rewards, next_states, dones = zip(*self.history[i:i+batch_size])
+            states = np.array(list(map(convert_and_flatten_state, np.array(states).reshape((-1, 64)))))
+            actions = np.array(actions)
+            rewards = np.array(rewards)
+            dones = np.array(dones)
+            targets = self.model.predict(states)
+            next_states = np.array(list(map(convert_and_flatten_state,np.array(next_states).reshape((-1,64)))))
+            if(self.player == "O"):
+                targets[np.arange(batch_size), actions.astype(int)] = rewards + self.gamma * np.max(self.model.predict(next_states), axis=1) * (1 - dones)
+            else:
+                targets[np.arange(batch_size), actions.astype(int)] = rewards + self.gamma * np.min(self.model.predict(next_states), axis=1) * (1 - dones)
+            history = self.model.fit(states, targets, epochs=50, verbose=0)
+            print(max(history.history['loss']))
 
-        states = np.array(list(map(convert_and_flatten_state, np.array(states).reshape((-1, 64)))))
-        actions = np.array(actions)
-        rewards = np.array(rewards)
-        next_states = np.array(list(map(convert_and_flatten_state,np.array(next_states).reshape((-1,64)))))
-        dones = np.array(dones)
-        # states = states.reshape((-1, 64))
-        # next_states = next_states.reshape((-1, 64))
+        # states, actions, rewards, next_states, dones = zip(*random.sample(self.history, batch_size))
+        # # states, actions, rewards, next_states, dones = batch[:, 0], batch[:, 1], batch[:, 2], batch[:, 3], batch[:, 4]
 
-        targets = self.model.predict(states)
-        if(self.player == "O"):
-            targets[np.arange(batch_size), actions.astype(int)] = rewards + self.gamma * np.max(self.model.predict(next_states), axis=1) * (1 - dones)
-        else:
-            targets[np.arange(batch_size), actions.astype(int)] = rewards + self.gamma * np.min(self.model.predict(next_states), axis=1) * (1 - dones)
+        # states = np.array(list(map(convert_and_flatten_state, np.array(states).reshape((-1, 64)))))
+        # actions = np.array(actions)
+        # rewards = np.array(rewards)
+        # next_states = np.array(list(map(convert_and_flatten_state,np.array(next_states).reshape((-1,64)))))
+        # dones = np.array(dones)
+        # # states = states.reshape((-1, 64))
+        # # next_states = next_states.reshape((-1, 64))
 
-        history = self.model.fit(states, targets, epochs=50, verbose=0)
-        print(max(history.history['loss']))
+        # targets = self.model.predict(states)
+        # if(self.player == "O"):
+        #     targets[np.arange(batch_size), actions.astype(int)] = rewards + self.gamma * np.max(self.model.predict(next_states), axis=1) * (1 - dones)
+        # else:
+        #     targets[np.arange(batch_size), actions.astype(int)] = rewards + self.gamma * np.min(self.model.predict(next_states), axis=1) * (1 - dones)
+
+        # history = self.model.fit(states, targets, epochs=50, verbose=0)
+        # print(max(history.history['loss']))
         if self.epsilon > self.epilon_lower_bound:
             self.epsilon *= self.epsilon_decay_rate
 
